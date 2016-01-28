@@ -21,7 +21,7 @@ namespace HeadlessAdapterApp
 
             try
             {
-                adapter = new Adapter();
+                adapter = new Adapter("");
                 dsbBridge = new DsbBridge(adapter);
 
                 var initResult = dsbBridge.Initialize();

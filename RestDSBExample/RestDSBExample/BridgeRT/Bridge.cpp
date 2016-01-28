@@ -181,6 +181,7 @@ Leave:
     }
 
     BridgeLog::Instance()->LogLeave(__FUNCTIONW__, hr);
+	
     return hr;
 }
 
@@ -287,6 +288,14 @@ int32 DsbBridge::ShutdownInternal()
 
     BridgeLog::Instance()->LogLeave(__FUNCTIONW__);
     return hr;
+}
+
+int32
+DsbBridge::UpdateDeviceCustome(_In_ IAdapterDevice ^device, bool exposedOnAlljoynBus) {
+	UpdateDevice(device, exposedOnAlljoynBus);
+	//CreateDevice
+	int32 hr = S_OK;
+	return hr;
 }
 
 QStatus DsbBridge::InitializeDevices(_In_ bool isUpdate)
@@ -396,13 +405,13 @@ QStatus DsbBridge::UpdateDevice(IAdapterDevice ^ device, bool exposedOnAllJoynBu
     // check if device is already in device list (hence exposed on alljoyn)
     auto deviceIterator = m_deviceList.find(device->GetHashCode());
     if (deviceIterator == m_deviceList.end() &&
-        exposedOnAllJoynBus)
+        !exposedOnAllJoynBus)
     {
         // device doesn't exist (hence isn't exposed on AllJoyn) => create it (creation also expose on alljoyn)
         status = CreateDevice(device);
     }
     else if (deviceIterator != m_deviceList.end() &&
-        !exposedOnAllJoynBus)
+        exposedOnAllJoynBus)
     {
 
         // the device exist (hence is exposed on allJoyn)

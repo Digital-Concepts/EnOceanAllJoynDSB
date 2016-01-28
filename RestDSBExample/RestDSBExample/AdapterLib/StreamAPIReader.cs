@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading.Tasks;
 using Windows.Storage.Streams;
 using Windows.Web.Http;
 
@@ -14,7 +15,7 @@ namespace AdapterLib
     {
         private IDictionary<string, IAdapterDevice> adapterDevices = null;
         Adapter adapter = null;
-        public async void readStream(HttpClient m_httpClient, IDictionary<string, IAdapterDevice> adapterDevices, Adapter adapter)
+        public Task readStream(HttpClient m_httpClient, IDictionary<string, IAdapterDevice> adapterDevices, Adapter adapter)
         {
             this.adapterDevices = adapterDevices;
             this.adapter = adapter;
@@ -27,43 +28,66 @@ namespace AdapterLib
 
             ulong totalBytesRead = 0;
             IBuffer buffer = new Windows.Storage.Streams.Buffer(10000000);
-            do
-            {
-
-                buffer = inputStream.ReadAsync(buffer, buffer.Capacity, InputStreamOptions.Partial).AsTask().Result;
-                totalBytesRead += buffer.Length;
-
-                DataReader dataReader = DataReader.FromBuffer(buffer);
-                var bufferStr = dataReader.ReadString(buffer.Length);
-                Debug.WriteLine("Json..............");
-                Debug.WriteLine(bufferStr);
-
-                var isJsonValid = ValidateJSON(bufferStr);
-                if (isJsonValid)
+            return Task.Run(()=> {
+                do
                 {
-                    var Json = JObject.Parse(bufferStr);
-                    var ContentType = Json.First.First.Value<string>("content");
-                    if (ContentType.Equals("devices"))
-                    {
-                        //update devices with their current states...
-                        Debug.WriteLine("devices..............");
-                        var states = Json.Value<JToken>("states");
-                        updateDevices(states);
-                    }
-                    else
-                    if (ContentType.Equals("telegram"))
-                    {
-                        //update device attribute with its current value...
-                        Debug.WriteLine("Telegram..............");
-                        var telegram = Json.Value<JToken>("telegram");
-                        updateDevice(telegram);
-                    }
-                }
+                    buffer = inputStream.ReadAsync(buffer, buffer.Capacity, InputStreamOptions.Partial).AsTask().Result;
+                    totalBytesRead += buffer.Length;
 
-            } while (buffer.Length > 0);
-            //This will never reach
-            Debug.WriteLine("out of loop.....");
+                    DataReader dataReader = DataReader.FromBuffer(buffer);
+                    var bufferStr = dataReader.ReadString(buffer.Length);
+                    Debug.WriteLine("Json..............");
+                    Debug.WriteLine(bufferStr);
+
+                    var isJsonValid = ValidateJSON(bufferStr);
+                    if (isJsonValid)
+                    {
+                        var Json = JObject.Parse(bufferStr);
+                        var ContentType = Json.First.First.Value<string>("content");
+                        if (ContentType.Equals("devices"))
+                        {
+                            //update devices with their current states...
+                            Debug.WriteLine("devices..............");
+                            var devices = Json.Value<JToken>("devices");
+                            updateDevices(devices);
+                        }
+                        else
+                        if (ContentType.Equals("telegram"))
+                        {
+                            //update device attribute with its current value...
+                            Debug.WriteLine("Telegram..............");
+                            var telegram = Json.Value<JToken>("telegram");
+                            updateDevice(telegram);
+                        }
+                        else
+                        if (ContentType.Equals("device"))
+                        {
+                            //update device attribute with its current value...
+                            Debug.WriteLine("Device..............");
+                            var device = Json.Value<JToken>("device");
+                            //device.Value<string>("friendlyId");
+                            //device.Value<string>("eep");
+                            //device.Value<string>("lastSeen");
+                            //device.Value<string>("version");
+                            //device.Value<JToken>("transmitModes");
+                            string operable = device.Value<string>("operable");
+                            if (operable != null && operable.Equals("True"))
+                            {
+                                //addDevice(device);
+                            }
+                        }
+                    }
+
+                } while (buffer.Length > 0);
+            });
         }
+
+        //private void addDevice(JToken device)
+        //{
+        //    add device to Device list
+        //    but how how to determine profile?
+        //    adapter.addDevice(device.ToString());
+        //}
 
         private void updateDevices(JToken devicesJT)
         {

@@ -40,7 +40,8 @@ namespace BridgeRT
         DsbBridge(_In_ IAdapter^ adapter);
         virtual ~DsbBridge();
 
-
+		
+		int32 UpdateDeviceCustome(_In_ IAdapterDevice ^device, _In_ bool exposedOnAlljoynBus);
         int32 Initialize();
         int32 Shutdown();
 

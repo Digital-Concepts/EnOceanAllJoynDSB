@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Package xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10" xmlns:mp="http://schemas.microsoft.com/appx/2014/phone/manifest" xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10" xmlns:iot="http://schemas.microsoft.com/appx/manifest/iot/windows10" IgnorableNamespaces="uap mp iot">
-  <Identity Name="RestDSBExampleHeadedAdapterApp" Publisher="CN=admin" Version="1.0.3.0" />
+  <Identity Name="RestDSBExampleHeadedAdapterApp" Publisher="CN=ZBaloch" Version="1.0.3.0" />
   <mp:PhoneIdentity PhoneProductId="1741d927-4f13-4df4-b9d4-19e51bb19c5a" PhonePublisherId="00000000-0000-0000-0000-000000000000" />
   <Properties>
     <DisplayName>RestDSBExampleHeadedAdapterApp</DisplayName>
