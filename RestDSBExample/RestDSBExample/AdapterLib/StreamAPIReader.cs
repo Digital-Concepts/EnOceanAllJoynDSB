@@ -36,8 +36,6 @@ namespace AdapterLib
 
                     DataReader dataReader = DataReader.FromBuffer(buffer);
                     var bufferStr = dataReader.ReadString(buffer.Length);
-                    Debug.WriteLine("Json..............");
-                    Debug.WriteLine(bufferStr);
 
                     var isJsonValid = ValidateJSON(bufferStr);
                     if (isJsonValid)
@@ -47,7 +45,6 @@ namespace AdapterLib
                         if (ContentType.Equals("devices"))
                         {
                             //update devices with their current states...
-                            Debug.WriteLine("devices..............");
                             var devices = Json.Value<JToken>("devices");
                             updateDevices(devices);
                         }
@@ -55,7 +52,6 @@ namespace AdapterLib
                         if (ContentType.Equals("telegram"))
                         {
                             //update device attribute with its current value...
-                            Debug.WriteLine("Telegram..............");
                             var telegram = Json.Value<JToken>("telegram");
                             updateDevice(telegram);
                         }
@@ -63,7 +59,6 @@ namespace AdapterLib
                         if (ContentType.Equals("device"))
                         {
                             //update device attribute with its current value...
-                            Debug.WriteLine("Device..............");
                             var device = Json.Value<JToken>("device");
                             //device.Value<string>("friendlyId");
                             //device.Value<string>("eep");
@@ -91,9 +86,7 @@ namespace AdapterLib
 
         private void updateDevices(JToken devicesJT)
         {
-            Debug.WriteLine("updateDevicesss.......");
             var devices = devicesJT.Children();
-            Debug.WriteLine("Count......" + devices.Count());
             foreach (var deviceToken in devices)
             {
                 var deviceId = deviceToken.Value<string>("deviceId");
@@ -126,7 +119,6 @@ namespace AdapterLib
 
         private void updateDevice(JToken telegram)
         {
-            Debug.WriteLine("updateDevice.......");
             var deviceId = telegram.Value<string>("deviceId");
             var direction = telegram.Value<string>("direction");
             var functions = telegram.Value<JToken>("functions");

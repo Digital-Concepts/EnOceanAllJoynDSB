@@ -112,6 +112,9 @@
   <ItemGroup>
     <Compile Include="Adapter.cs" />
     <Compile Include="AdapterDevice.cs" />
+    <Compile Include="LightingServiceHandler.cs" />
+    <Compile Include="LsfEnums.cs" />
+    <Compile Include="Permundo.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="StreamAPIReader.cs" />
   </ItemGroup>

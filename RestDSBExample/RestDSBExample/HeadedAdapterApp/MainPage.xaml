@@ -5,10 +5,12 @@
     xmlns:local="using:HeadedAdapterApp"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    mc:Ignorable="d">
+    mc:Ignorable="d" Width="450">
 
-    <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
-        <TextBox x:Name="DCGWURL" HorizontalAlignment="Left" Margin="60,213,0,0" TextWrapping="Wrap" Text="x.x.x.x" VerticalAlignment="Top" Width="240"/>
-        <Button x:Name="start" Content="Start" HorizontalAlignment="Left" Margin="134,300,0,0" VerticalAlignment="Top" RenderTransformOrigin="1.294,0.469" Click="start_Click"/>
+    <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}" Margin="10,10,10,65">
+        <TextBox x:Name="DCGWURL" HorizontalAlignment="Left" Margin="160,113,0,0" TextWrapping="Wrap" Text="dcgw.enocean-gateway.eu" VerticalAlignment="Top" Width="240"/>
+        <Button x:Name="start" Content="Start" HorizontalAlignment="Left" Margin="342,150,0,0" VerticalAlignment="Top" RenderTransformOrigin="1.294,0.469" Click="start_Click"/>
+        <TextBlock x:Name="textBlock" HorizontalAlignment="Left" Margin="10,125,0,0" TextWrapping="Wrap" Text="EnOcean Gateway IP : " VerticalAlignment="Top"/>
+        <Button x:Name="stop" Content="Stop" HorizontalAlignment="Left" Margin="342,150,0,0" VerticalAlignment="Top" Click="stop_Click" Visibility="Collapsed"/>
     </Grid>
 </Page>

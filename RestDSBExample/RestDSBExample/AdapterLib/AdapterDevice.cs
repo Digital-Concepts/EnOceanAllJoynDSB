@@ -273,11 +273,8 @@ namespace AdapterLib
 
         // Lighting Service Handler
         public ILSFHandler LightingServiceHandler
-        {
-            get
-            {
-                return null;
-            }
+        {           
+                get; protected set;
         }
 
         // Icon
@@ -296,8 +293,7 @@ namespace AdapterLib
             string Model,
             string Version,
             string SerialNumber,
-            string Description,
-            string accessToken)
+            string Description)
         {
             this.Name = Name;
             this.Vendor = VendorName;
@@ -391,7 +387,6 @@ namespace AdapterLib
         public void UpdatePropertyValue(IAdapterSignal covSignal, Adapter adapter)
         {
             //This will update attribute which has been changed
-            System.Diagnostics.Debug.WriteLine("valueChangedEventHandler");
             foreach (IAdapterValue param in covSignal.Params)
             {
                 if (param.Name == Constants.COV__ATTRIBUTE_HANDLE)

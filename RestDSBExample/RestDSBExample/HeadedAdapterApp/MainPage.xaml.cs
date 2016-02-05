@@ -14,6 +14,7 @@ using Windows.UI.Xaml.Input;
 using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Navigation;
 using BridgeRT;
+using AdapterLib;
 
 // The Blank Page item template is documented at http://go.microsoft.com/fwlink/?LinkId=402352&clcid=0x409
 
@@ -24,6 +25,8 @@ namespace HeadedAdapterApp
     /// </summary>
     public sealed partial class MainPage : Page
     {
+        DsbBridge dsbBridge = null;
+        Adapter adapter = null;
         public MainPage()
         {
             this.InitializeComponent();
@@ -32,17 +35,17 @@ namespace HeadedAdapterApp
         private async void start_Click(object sender, RoutedEventArgs e)
         {
             string DCGW_URL = DCGWURL.Text;
-
+            
             //This code was taken from App.xaml.cs 
             //This code is placed here becuase we need to start Bridge after IP of EnOcean Gateway is available
             await ThreadPool.RunAsync(new WorkItemHandler((IAsyncAction action) =>
               {
                   try
                   {
-                      var adapter = new AdapterLib.Adapter(DCGW_URL);
-                      DsbBridge dsbBridge = new DsbBridge(adapter);
+                      adapter = new AdapterLib.Adapter(DCGW_URL);
+                      dsbBridge = new DsbBridge(adapter);
 
-                      //Change made by zahoor (25/1/2016)
+                      //Change made on (25/1/2016)
                       //Adapter object need dsbBridge to Add new devices
                       adapter.setDsbBridge(dsbBridge);
 
@@ -60,7 +63,24 @@ namespace HeadedAdapterApp
               }));
 
             start.Visibility = Visibility.Collapsed;
+            stop.Visibility = Visibility.Visible;
         }
 
+        private void stop_Click(object sender, RoutedEventArgs e)
+        {           
+            if (dsbBridge != null)
+            {
+                //dsbBridge?.Shutdown();
+                dsbBridge.Shutdown();
+            }
+
+            if (adapter != null)
+            {
+                adapter.Shutdown();
+            }
+
+            stop.Visibility = Visibility.Collapsed;
+            start.Visibility = Visibility.Visible;
+        }
     }
 }

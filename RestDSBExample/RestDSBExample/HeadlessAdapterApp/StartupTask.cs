@@ -21,7 +21,9 @@ namespace HeadlessAdapterApp
 
             try
             {
-                adapter = new Adapter("");
+                //dcgw.enocean-gateway.eu is IP of EnOcean gateway, it needs to be change if you are using local or different gateway
+                //Using this IP of gateway, you can see changes in gateway and devices on "http://dcgw.enocean-gateway.eu:8080/devices/stream" (Streaming of gateway)
+                adapter = new Adapter("dcgw.enocean-gateway.eu");
                 dsbBridge = new DsbBridge(adapter);
 
                 var initResult = dsbBridge.Initialize();
