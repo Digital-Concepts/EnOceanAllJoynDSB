@@ -680,10 +680,13 @@ namespace AdapterLib
             var functionGroups = profile.Value<JToken>("functionGroups");
 
             AdapterDevice adapterDevice = null;
-            if (eep.Equals("D2-01-09")) {
+            if (eep.Equals("D2-01-09") || eep.Equals("A5-38-08")) {
+
                  adapterDevice = new Permundo(friendlyId, "EnOcean", eep, "0", deviceId, title);
                 ((Permundo)adapterDevice).adapter = this;
+
             } else {
+
                  adapterDevice = new AdapterDevice(friendlyId, "EnOcean", eep, "0", deviceId, title);
 
                 foreach (var functionGroup in functionGroups)
@@ -787,7 +790,7 @@ namespace AdapterLib
             dsbBridge.UpdateDeviceCustome(adapterDevice, true);
         }
 
-        //Update All devices status 
+        //Update status all devices status 
         private void updateDevices(JToken devicesJT)
         {
             var devices = devicesJT.Children();
@@ -804,13 +807,9 @@ namespace AdapterLib
                     var meaning = funcntion.Value<string>("meaning");
 
                     if (isPermudo(key)) {
-                        //bool permudoState = false;
-                        //if (value.Equals("1"))
-                        //    permudoState = true;
                         ((Permundo)device).updateStatus(UInt16.Parse(value));
                         continue;
                     };
-
 
                     IList<IAdapterProperty> properties = device.Properties;
                     foreach (var property in properties)
