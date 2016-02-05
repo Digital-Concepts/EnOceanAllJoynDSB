@@ -842,6 +842,12 @@ namespace AdapterLib
 
                 AdapterDevice device = (AdapterDevice)GetObject(devicesDict, deviceId);
 
+                if (isPermudo(key))
+                {
+                    ((Permundo)device).updateStatus(UInt16.Parse(value));
+                    continue;
+                };
+
                 if (direction.Equals("from"))
                 {
                     if (device != null)
