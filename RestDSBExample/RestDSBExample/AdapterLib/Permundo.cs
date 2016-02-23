@@ -23,13 +23,14 @@ namespace AdapterLib
             setDimValue(LampState);
         }
 
-        public void updateStatus(UInt16 LampState_OnOff) {
+        public void updateStates(UInt16 LampState_OnOff) {
 
             bool permundoState = false;
             if (LampState_OnOff > 0)
                 permundoState = true;
 
             base.LightingServiceHandler.LampState_OnOff = permundoState;
+            base.LightingServiceHandler.LampState_Brightness = LampState_OnOff;
         }        
 
         public Adapter adapter

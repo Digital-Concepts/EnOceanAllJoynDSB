@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Windows.Storage.Streams;
 using Windows.Web.Http;
 
+//This file is not used anymore, it need to be removed.
 namespace AdapterLib
 {
     class StreamAPIReader

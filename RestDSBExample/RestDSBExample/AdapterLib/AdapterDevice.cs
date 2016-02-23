@@ -231,7 +231,6 @@ namespace AdapterLib
                             IAdapterDeviceLightingService,
                             IAdapterDeviceControlPanel
     {
-        //private readonly string AccessToken;
 
         // Object Name
         public string Name { get; }
@@ -303,7 +302,6 @@ namespace AdapterLib
             this.SerialNumber = SerialNumber;
             this.Description = Description;
 
-            //this.AccessToken = accessToken;
 
             try
             {
@@ -327,8 +325,6 @@ namespace AdapterLib
             this.FirmwareVersion = Other.FirmwareVersion;
             this.SerialNumber = Other.SerialNumber;
             this.Description = Other.Description;
-
-            //this.AccessToken = Other.AccessToken;
 
             try
             {

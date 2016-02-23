@@ -543,21 +543,7 @@ namespace AdapterLib
         //    }
         //    return result;
         //}
-
-        //No method is added for this bridge
-        //private void AddMethods(string category, string deviceId, AdapterDevice adapterDevice)
-        //{
-        //    var method = new AdapterMethod(
-        //        "SetTemperature",
-        //        "Change the target temperature.",
-        //        0, null);
-
-        //    var methodPath = $"devices/{category}/{deviceId}";
-        //    //method.InputParams.Add(new AdapterValue("TargetTemperature", 0.0, methodPath));
-        //    //method.InputParams.Add(new AdapterValue("TemperatureScale", 'f'));
-
-        //    adapterDevice.Methods.Add(method);
-        //}
+       
 
         //No method is added for this bridge
         //private void AddMethods(string deviceId, AdapterDevice adapterDevice, string methodName, string description, IList<IAdapterValue> InputParams)
@@ -577,18 +563,7 @@ namespace AdapterLib
 
         //private void AddProperties(string category, string propertiesJson, string deviceId, AdapterDevice adapterDevice)
         //{
-        //    var property = new AdapterProperty("Thermostat", string.Empty);
-
-        //    adapterDevice.Properties.Add(property);
-
-        //    foreach (var propertyKvp in JObject.Parse(propertiesJson))
-        //    {
-        //        var name = this.CamelCase(propertyKvp.Key);
-        //        var path = $"devices/{category}/{deviceId}/{propertyKvp.Key}";
-        //        object value = this.GetJTokenValue(propertyKvp.Value);
-
-        //        property.Attributes.Add(new AdapterAttribute(name, value, path));
-        //    }
+        //   
 
         //}
 
@@ -807,7 +782,7 @@ namespace AdapterLib
                     var meaning = funcntion.Value<string>("meaning");
 
                     if (isPermudo(key)) {
-                        ((Permundo)device).updateStatus(UInt16.Parse(value));
+                        ((Permundo)device).updateStates(UInt16.Parse(value));
                         continue;
                     };
 
@@ -844,7 +819,7 @@ namespace AdapterLib
 
                 if (isPermudo(key))
                 {
-                    ((Permundo)device).updateStatus(UInt16.Parse(value));
+                    ((Permundo)device).updateStates(UInt16.Parse(value));
                     continue;
                 };
 

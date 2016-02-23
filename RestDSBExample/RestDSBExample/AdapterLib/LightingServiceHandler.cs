@@ -14,7 +14,7 @@ namespace AdapterLib
             this.permundo = permundo;
             
             //LampDetails_Color = false;           
-            //LampDetails_Dimmable = true;
+            LampDetails_Dimmable = true;
             //LampState_OnOff = true;
             LampDetails_HasEffects = false;
             //LampDetails_IncandescentEquivalent = 60;
