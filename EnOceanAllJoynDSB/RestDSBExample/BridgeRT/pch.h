@@ -31,7 +31,7 @@
 #include <alljoyn_c/BusListener.h>
 #include <alljoyn_c/SessionPortListener.h>
 #include <alljoyn_c/InterfaceDescription.h>
-
+#include <alljoy>
 #include "Misc.h"
 #include "IAdapter.h"
 

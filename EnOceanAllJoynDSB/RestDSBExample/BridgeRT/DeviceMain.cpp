@@ -71,7 +71,7 @@ QStatus DeviceMain::Initialize(BridgeDevice ^parent)
     {
         return status;
     }
-
+	
     // add interface to bus object and expose it
     status = alljoyn_busobject_addinterface(m_AJBusObject, m_interfaceDescription);
     if (ER_OK != status)
@@ -79,7 +79,7 @@ QStatus DeviceMain::Initialize(BridgeDevice ^parent)
         goto leave;
     }
 	//alljoyn_busattachment_createinterfacesfromxml( )
-
+	
     // add method handler
     for (auto val : m_deviceMethods)
     {
@@ -87,7 +87,7 @@ QStatus DeviceMain::Initialize(BridgeDevice ^parent)
         QCC_BOOL found = false;
 
         found = alljoyn_interfacedescription_getmember(m_interfaceDescription, val.second->GetName().c_str(), &member);
-		
+
         if (!found)
         {
             status = ER_INVALID_DATA;
