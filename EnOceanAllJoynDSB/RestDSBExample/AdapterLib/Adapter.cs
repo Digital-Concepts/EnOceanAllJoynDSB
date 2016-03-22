@@ -27,6 +27,8 @@ namespace AdapterLib
         // Connection strings variable for EnOcean APIs
         public static string DCGWUrl { get; set; }
         private HttpClient httpClient;
+
+        //This refer to DsbBridge in BridegRT project
         private DsbBridge dsbBridge = null;
         
         private const uint ERROR_SUCCESS = 0;
@@ -49,14 +51,8 @@ namespace AdapterLib
         public Adapter(string DCGWURLParam)
         {
 
-            //setting IP of gateway
-
-            //If you have a EnOcean gateway then provide IP of gateway on UI and click start
+            //setting IP of gateway from UI             
             DCGWUrl = "http://" + DCGWURLParam + ":8080/";
-
-            //If you don't have gateway then use below public IP of EnOcean gateway and on UI just click start.
-            //You may not be 
-            //DCGWUrl = "http:/dcgw.enocean-gateway.eu:8080/";
 
             Windows.ApplicationModel.Package package = Windows.ApplicationModel.Package.Current;
             Windows.ApplicationModel.PackageId packageId = package.Id;
@@ -124,13 +120,17 @@ namespace AdapterLib
             try
             {
                 filter.ServerCredential = new Windows.Security.Credentials.PasswordCredential(DCGWUrl, "admin", "admin");
+                httpClient = new HttpClient(filter);
             }
             catch (ArgumentNullException ex)
             {
-                Debug.WriteLine(ex.ParamName);
+                Debug.WriteLine("ArgumentNullException:" + ex.ParamName);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("Exception" + ex.Message);
             }
 
-            httpClient = new HttpClient(filter);
             return ERROR_SUCCESS;
         }
 
@@ -657,10 +657,10 @@ namespace AdapterLib
             var functionGroups = profile.Value<JToken>("functionGroups");
 
             AdapterDevice adapterDevice = null;
-            if (eep.Equals("D2-01-09") || eep.Equals("A5-38-08")) {
 
-                 adapterDevice = new Permundo(friendlyId, "EnOcean", eep, "0", deviceId, title);
-                ((Permundo)adapterDevice).adapter = this;
+            if (isLampProfile(eep)) {
+                 adapterDevice = new Lamp(friendlyId, "EnOcean", eep, "0", deviceId, title);
+                ((Lamp)adapterDevice).adapter = this;
 
             } else {
 
@@ -759,7 +759,7 @@ namespace AdapterLib
             }
 
             this.NotifyDeviceArrival(adapterDevice);
-            this.devices = devicesDict.Values.ToList();
+            //this.devices = devicesDict.Values.ToList();
         }
 
         private void deleteDevice(AdapterDevice adapterDevice)
@@ -769,7 +769,7 @@ namespace AdapterLib
             devicesDict.Remove(adapterDevice.SerialNumber);
         }
 
-        //Update status all devices status 
+        //Update status of all devices with their current values 
         private void updateDevices(JToken devicesJT)
         {
             var devices = devicesJT.Children();
@@ -785,8 +785,8 @@ namespace AdapterLib
                     var value = funcntion.Value<string>("value");
                     var meaning = funcntion.Value<string>("meaning");
 
-                    if (isPermudo(key)) {
-                        ((Permundo)device).updateStates(UInt16.Parse(value));
+                    if (isLamp(key)) {
+                        ((Lamp)device).updateStates(UInt16.Parse(value));
                         break;
                     };
 
@@ -798,7 +798,9 @@ namespace AdapterLib
                         {
                             if (attribute.Value.Name.Equals(key))
                             {
-                                attribute.Value.Data = Windows.Foundation.PropertyValue.CreateString(value);
+                                if (value != null) {
+                                    attribute.Value.Data = Windows.Foundation.PropertyValue.CreateString(value);
+                                }                                
                             }
                         }
                     }
@@ -824,11 +826,11 @@ namespace AdapterLib
 
                 if (direction.Equals("from"))
                 {
-                    if (isPermudo(key))
+                    if (isLamp(key))
                     {
-                        if (value != ((Permundo)device).LampState_OnOff_Save.ToString())
+                        if (value != ((Lamp)device).OnOff_Value_Save.ToString())
                         {
-                            ((Permundo)device).updateStates(UInt16.Parse(value));
+                            ((Lamp)device).updateStates(UInt16.Parse(value));
                         }
 
                         
@@ -885,9 +887,18 @@ namespace AdapterLib
             }
         }
 
-        private bool isPermudo(string keyName)
+        private bool isLamp(string keyName)
         {
             if (keyName.Equals("dimValue")) {
+                return true;
+            }
+            return false;
+        }
+
+        private bool isLampProfile(string eep)
+        {
+            if (eep.Equals("D2-01-09") || eep.Equals("A5-38-08"))
+            {
                 return true;
             }
             return false;

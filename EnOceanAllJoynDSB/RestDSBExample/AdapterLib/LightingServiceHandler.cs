@@ -10,8 +10,8 @@ namespace AdapterLib
 {
     internal class LightingServiceHandler : ILSFHandler
     {
-        public LightingServiceHandler(Permundo permundo) {
-            this.permundo = permundo;
+        public LightingServiceHandler(Lamp permundo) {
+            this.lamp = permundo;
             
             //LampDetails_Color = false;           
             LampDetails_Dimmable = true;
@@ -20,7 +20,7 @@ namespace AdapterLib
             //LampDetails_IncandescentEquivalent = 60;
             //LampDetails_LampBaseType = (uint)1;
             //LampDetails_LampBeamAngle = 130;
-            LampDetails_LampID = this.permundo.SerialNumber;
+            LampDetails_LampID = this.lamp.SerialNumber;
             //LampDetails_LampType = (uint)1;
             //LampDetails_Make = (uint)AdapterLib.LsfEnums.LampMake.MAKE_OEM1;
             //LampDetails_MaxLumens = 100;
@@ -37,7 +37,7 @@ namespace AdapterLib
             LampState_Version = 101;
         }
   
-        private Permundo permundo
+        private Lamp lamp
         {
             get; set;
         }
@@ -133,11 +133,8 @@ namespace AdapterLib
             }
 
             set {
-                if (_LampState_OnOff != value )
-                {
                     _LampState_OnOff = value;
-                    permundo.turnOnOff(_LampState_OnOff);
-                }
+                    lamp.turnOnOff(_LampState_OnOff);
             }
 
         }
@@ -155,7 +152,7 @@ namespace AdapterLib
                 if (LampDetails_Dimmable)
                 {
                     _LampState_Brightness = value;
-                    permundo.dim((UInt16)_LampState_Brightness);
+                    lamp.dim((UInt16)_LampState_Brightness);
                 }
             }
         }            
