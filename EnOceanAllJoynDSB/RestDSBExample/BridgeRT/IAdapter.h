@@ -198,6 +198,12 @@ namespace BridgeRT
 			Platform::String^ get();
 		}
 
+		//Path to the REST API
+		property Platform::String^ Path
+		{
+			Platform::String^ get();
+		}
+
 		// The input parameters
 		property IAdapterValueVector^ InputParams
 		{

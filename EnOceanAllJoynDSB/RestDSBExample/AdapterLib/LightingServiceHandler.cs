@@ -10,8 +10,8 @@ namespace AdapterLib
 {
     internal class LightingServiceHandler : ILSFHandler
     {
-        public LightingServiceHandler(Lamp permundo) {
-            this.lamp = permundo;
+        public LightingServiceHandler(Lamp lamp) {
+            this.lamp = lamp;
             
             //LampDetails_Color = false;           
             LampDetails_Dimmable = true;
@@ -169,17 +169,6 @@ namespace AdapterLib
             return 0; //TODO
         }           
 
-        uint ILSFHandler.LampState_ApplyPulseEffect(State FromState, State ToState, uint Period, uint Duration, uint NumPulses, ulong Timestamp, out uint LampResponseCode)
-        {
-            throw new NotImplementedException();
-        }
-
-        uint ILSFHandler.TransitionLampState(ulong Timestamp, State NewState, uint TransitionPeriod, out uint LampResponseCode)
-        {
-            throw new NotImplementedException();
-        }
-
-
         uint ILSFHandler.ClearLampFault(uint InLampFaultCode, out uint LampResponseCode, out uint OutLampFaultCode)
         {
             throw new NotImplementedException();
@@ -191,6 +180,16 @@ namespace AdapterLib
             LampResponseCode = 0;
             OutLampFaultCode = 0;
             return 0; //TODO
+        }
+
+        public uint TransitionLampState(ulong Timestamp, BridgeRT.State NewState, uint TransitionPeriod, out uint LampResponseCode)
+        {
+            throw new NotImplementedException();
+        }
+
+        public uint LampState_ApplyPulseEffect(BridgeRT.State FromState, BridgeRT.State ToState, uint Period, uint Duration, uint NumPulses, ulong Timestamp, out uint LampResponseCode)
+        {
+            throw new NotImplementedException();
         }
     }
 }

@@ -25,6 +25,7 @@
     <GenerateAppxPackageOnBuild>true</GenerateAppxPackageOnBuild>
     <AppxPackageSigningEnabled>true</AppxPackageSigningEnabled>
     <ContainsStartupTask>true</ContainsStartupTask>
+    <PackageCertificateThumbprint>F18227F67FC556EC19C0E705F2E8202B7FD548DC</PackageCertificateThumbprint>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|ARM'">
     <DebugSymbols>true</DebugSymbols>

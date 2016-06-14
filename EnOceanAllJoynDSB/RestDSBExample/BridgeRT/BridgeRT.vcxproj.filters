@@ -86,4 +86,7 @@
     <ClInclude Include="LSFConsts.h" />
     <ClInclude Include="LSFSignalHandler.h" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="ClassDiagram.cd" />
+  </ItemGroup>
 </Project>

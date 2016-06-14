@@ -28,7 +28,7 @@ namespace AdapterLib
         public static string DCGWUrl { get; set; }
         private HttpClient httpClient;
 
-        //This refer to DsbBridge in BridegRT project
+        //This refer to DsbBridge in BridegRT project, 
         private DsbBridge dsbBridge = null;
         
         private const uint ERROR_SUCCESS = 0;
@@ -39,6 +39,10 @@ namespace AdapterLib
         private const int DEVICE_ARRIVAL_SIGNAL_PARAM_INDEX = 0;
         private const int DEVICE_REMOVAL_SIGNAL_INDEX = 1;
         private const int DEVICE_REMOVAL_SIGNAL_PARAM_INDEX = 0;
+
+        //Learn in a device fields
+        public static string FriendlyName  { get; set; }
+        public static string NewDeviceProfile  { get; set; }
 
         public string Vendor { get; }
         public string AdapterName { get; }
@@ -85,7 +89,7 @@ namespace AdapterLib
                 this.Signals = new List<IAdapterSignal>();
                 this.devices = new List<IAdapterDevice>();
                 this.devicesDict = new Dictionary<string, IAdapterDevice>();
-                this.SignalsDict = new Dictionary<string, IAdapterSignal>();
+                this.deviceSignals = new Dictionary<string, IAdapterSignal>();
                 this.signalListeners = new Dictionary<int, IList<SIGNAL_LISTENER_ENTRY>>();
 
                 //Create Adapter Signals
@@ -97,7 +101,7 @@ namespace AdapterLib
             }
         }
 
-        //Setting DsBBridge for the purpose of adding and removing devices when bridge is running
+        //Setting DsBBridge for the purpose of adding and removing AllJoyn devices when bridge is running
         public void setDsbBridge(DsbBridge dsbBridge) {
             this.dsbBridge = dsbBridge;
         }
@@ -125,10 +129,12 @@ namespace AdapterLib
             catch (ArgumentNullException ex)
             {
                 Debug.WriteLine("ArgumentNullException:" + ex.ParamName);
+                return ERROR_INVALID_HANDLE;
             }
             catch (Exception ex)
             {
                 Debug.WriteLine("Exception" + ex.Message);
+                return ERROR_INVALID_HANDLE;
             }
 
             return ERROR_SUCCESS;
@@ -268,25 +274,35 @@ namespace AdapterLib
         public uint CallMethod(IAdapterMethod Method, out IAdapterIoRequest RequestPtr)
         {
             RequestPtr = null;
-            //AdapterMethod adapterMethod = Method as AdapterMethod;
-            //string path = ((AdapterValue)Method.InputParams.First()).Path;
-            //IList<IAdapterValue> inputParams = Method.InputParams;
-            //string functions = null;
-            //foreach (var inputParam in inputParams)
-            //{
-            //    var key = inputParam.Name;
-            //    var value = (string)inputParam.Data;
-            //    if (functions == null)
-            //    {
-            //        functions = "{\"key\" : \"" + key + "\",\"value\" : \"" + value + "\"}";
-            //    }
-            //    else {
-            //        functions += ",{\"key\" : \"" + key + "\",\"value\" : \"" + value + "\"}";
-            //    }
 
-            //}
-            //return (uint)SetHttpValue(path, functions);
-            return 0;
+            if (Method.Name.Equals("Delete"))
+            {
+                String path = Method.Path;
+                return SetHttpValue(path, null, "");
+            }
+            else
+            {
+                FriendlyName = (string)Method.InputParams.First(param => param.Name.Equals("FriendlyName", StringComparison.OrdinalIgnoreCase)).Data;
+                //NewDeviceProfile = (string)Method.InputParams.First(param => param.Name.Equals("Profile", StringComparison.OrdinalIgnoreCase)).Data;
+
+                if (Method.Name.Equals("Add_RockerSwitch"))
+                {
+                    NewDeviceProfile = "F6-02-01";
+                }
+                else if (Method.Name.Equals("Add_Sensor"))
+                {
+                    NewDeviceProfile = "F6-05-01";
+                }
+                else if (Method.Name.Equals("Add_Handle"))
+                {
+                    NewDeviceProfile = "F6-10-00";
+                }
+                else if (Method.Name.Equals("Add_Other"))
+                {
+                    NewDeviceProfile = "other";
+                }
+                return (uint)SetHttpValue("system/receiveMode", null, "learnMode");
+            }
         }
 
         public uint RegisterSignalListener(IAdapterSignal Signal, IAdapterSignalListener Listener, object ListenerContext)
@@ -434,7 +450,7 @@ namespace AdapterLib
 
         //These Dictionary are added so objects can be get using a key
         private Dictionary<string, IAdapterDevice> devicesDict;
-        private Dictionary<string, IAdapterSignal> SignalsDict;
+        private Dictionary<string, IAdapterSignal> deviceSignals;
 
         // A map of signal handle (object's hash code) and related listener entry
         private Dictionary<int, IList<SIGNAL_LISTENER_ENTRY>> signalListeners;
@@ -446,6 +462,7 @@ namespace AdapterLib
             {
                 var request = PrepareRequest(HttpMethod.Get, "devices/stream", "", "");
                 var response = httpClient.SendRequestAsync(request, HttpCompletionOption.ResponseHeadersRead).AsTask().Result;
+
                 if (response.IsSuccessStatusCode)
                 {
                     using (response)
@@ -453,51 +470,57 @@ namespace AdapterLib
                         using (var stream = response.Content.ReadAsInputStreamAsync().GetResults())
                         {
                             IBuffer buffer = new Windows.Storage.Streams.Buffer(10000);
-                            string bufferStr = "";
+                            string bufferStream = "";
 
                             while (true) {
                                 buffer = stream.ReadAsync(buffer, buffer.Capacity, InputStreamOptions.Partial).AsTask().Result;
                                 DataReader dataReader = DataReader.FromBuffer(buffer);
-                                bufferStr += dataReader.ReadString(buffer.Length);
+                                bufferStream += dataReader.ReadString(buffer.Length);
                                 
-                                var isJsonValid = ValidateJSON(bufferStr);
-                                Debug.WriteLine(isJsonValid + ":" + bufferStr);
+                                var isJsonValid = ValidateJSON(bufferStream);
                                 if (isJsonValid)
                                 {
-                                    var Json = JObject.Parse(bufferStr);
-                                    bufferStr = "";
+                                    var streamJson = JObject.Parse(bufferStream);
+                                    var JsonProperty = streamJson.Property("header");                                    
+                                    Header header = JsonConvert.DeserializeObject<Header>(JsonProperty.Value.ToString());
 
+                                    bufferStream = "";
+                                    var content = header.content;                                    
+                                    if (content.Equals("telegram"))
+                                    {
+                                        TelegramBody telegram = JsonConvert.DeserializeObject<TelegramBody>(streamJson.ToString());
+                                        updateDevice(telegram.telegram);
+                                    }                                                        
+                                    else
+                                    if (content.Equals("device"))
+                                    {
+                                        LearnInTelegram learnInTelegram = JsonConvert.DeserializeObject<LearnInTelegram>(streamJson.ToString());
+                                        var device = learnInTelegram.device;
+                                        var deviceId = device.deviceId;
+                                        var operable = device.operable;
+                                        var deleted = device.deleted;
 
-                                    var ContentType = Json.First.First.Value<string>("content");
-                                    if (ContentType.Equals("devices"))
-                                    {
-                                        var devices = Json.Value<JToken>("devices");
-                                        updateDevices(devices);
-                                    }
-                                    else
-                                    if (ContentType.Equals("telegram"))
-                                    {
-                                        var telegram = Json.Value<JToken>("telegram");
-                                        updateDevice(telegram);
-                                    }
-                                    else
-                                    if (ContentType.Equals("device"))
-                                    {
-                                        var device = Json.Value<JToken>("device");
-                                        var deviceId = device.Value<string>("deviceId");
-                                        var deleted = device.Value<string>("deleted");
-                                        //device.Value<string>("friendlyId");
-                                        //device.Value<string>("eep");
-                                        //device.Value<string>("lastSeen");
-                                        //device.Value<string>("version");
-                                        //device.Value<JToken>("transmitModes");
-                                        string operable = device.Value<string>("operable");
-                                        if (operable != null && operable.Equals("True"))
+                                        if (!operable && !deleted)
                                         {
-                                            addDevice(device.ToString(), true);
-                                        } else if (deleted != null && deleted.Equals("True")) {
-                                            deleteDevice((AdapterDevice)GetObject(devicesDict, deviceId));
+                                            if (NewDeviceProfile != null) {
+                                                AddEODevice(learnInTelegram);
+                                            }                                          
+                                        } else if (deleted) {
+                                            AdapterDevice DeletedDevice = (AdapterDevice)GetObject(devicesDict, deviceId);
+                                            if (DeletedDevice != null) { DeleteDevice(DeletedDevice);}                                            
+
+                                        } else if (operable) {
+                                            IList<Device> devices = new List<Device>();
+                                            devices.Add(device);
+                                            AddDevice(device, true);
+                                            UpdateDevices(devices);
                                         }
+                                    }
+                                    else
+                                    if (content.Equals("devices"))
+                                    {
+                                        StreamDevices devices = JsonConvert.DeserializeObject<StreamDevices>(streamJson.ToString());
+                                        UpdateDevices(devices.devices);
                                     }
                                 }
                             }
@@ -516,13 +539,19 @@ namespace AdapterLib
                     if (response.Result.IsSuccessStatusCode)
                     {
                         var body = response.Result.Content.ReadAsStringAsync().AsTask().Result;
-                        var devices = JObject.Parse(body).Value<JToken>("devices");
-
-                        foreach (var device in devices)
+                        Devices devicesObj = JsonConvert.DeserializeObject<Devices>(JObject.Parse(body).ToString());
+                        
+                        foreach (var device in devicesObj.devices)
                         {
-                            this.addDevice(device.ToString(), false);
+                            this.AddDevice(device, false);
                         }
-                        this.devices = devicesDict.Values.ToList();
+
+                        //Add an extra AllJoyn device for Learn-in process
+                        AdapterDevice LearnInEODevice = AddLearnInDevice();                     
+                        devicesDict.Add("LearnInEODevice", LearnInEODevice);
+                        this.NotifyDeviceArrival(LearnInEODevice);
+
+                        this.devices = devicesDict.Values.ToList();                        
                     }
                     await ReadStreamAsync();
                 });
@@ -534,18 +563,7 @@ namespace AdapterLib
             }            
         }
 
-        //private string CamelCase(string value)
-        //{
-        //    var result = string.Empty;
-        //    var tokens = value.Split('_');
-        //    for (int i = 0; i < tokens.Length; i++)
-        //    {
-        //        var token = tokens[i];
-        //        result += char.ToUpper(token[0]) + token.Substring(1);
-        //    }
-        //    return result;
-        //}
-       
+    
 
         //No method is added for this bridge
         //private void AddMethods(string deviceId, AdapterDevice adapterDevice, string methodName, string description, IList<IAdapterValue> InputParams)
@@ -563,12 +581,6 @@ namespace AdapterLib
         //    adapterDevice.Methods.Add(method);
         //}
 
-        //private void AddProperties(string category, string propertiesJson, string deviceId, AdapterDevice adapterDevice)
-        //{
-        //   
-
-        //}
-
         private object GetJTokenValue(JToken token)
         {
             switch (token.Type)
@@ -581,246 +593,261 @@ namespace AdapterLib
                 default:
                     return token.Value<string>();
             }
-        }
+        }        
 
-        public uint SetHttpValue(string path, object data, string valueName)
+        public void AddEODevice(LearnInTelegram learnInTelegram)
         {
-            var request = PrepareRequest(HttpMethod.Put, path, data, valueName);
-            var response = httpClient.SendRequestAsync(request).AsTask().Result;
-            Windows.Web.Http.HttpStatusCode statusCode = response.StatusCode;
-            if (response.StatusCode == Windows.Web.Http.HttpStatusCode.InternalServerError)
+
+            var device = learnInTelegram.device;
+
+            device.friendlyId = FriendlyName;
+            device.operable = true;
+
+            var timestamp = learnInTelegram.header.timestamp;
+            learnInTelegram.header.timestamp = timestamp.Remove(timestamp.Length - 3, 1);
+            var firstSeen = device.firstSeen;
+            device.firstSeen = firstSeen.Remove(firstSeen.Length - 3, 1);
+
+            if (!NewDeviceProfile.Equals("F6-02-01") && !NewDeviceProfile.Equals("other"))
             {
-                return 500;
-            }
-            else if (response.StatusCode == Windows.Web.Http.HttpStatusCode.BadRequest)
-            {
-                return 400;
-            }
-            if (response.IsSuccessStatusCode)
-            {
-                return 0;
-            }
+                device.eeps.First().eep = NewDeviceProfile;
 
-            return 1;
-        }
-        //public uint SetHttpValue(string path, string functions)
-        //{
-        //    var request = this.PrepareRequest(HttpMethod.Put, path, null, functions);
-        //    var response = httpClient.SendRequestAsync(request).AsTask().Result;
+                Task<HttpResponseMessage> response = httpClient.GetAsync(new Uri(DCGWUrl + "profiles/" + NewDeviceProfile)).AsTask();
+                string body = response.Result.Content.ReadAsStringAsync().AsTask().Result;
 
+                ProfileDefination profileInfo = JsonConvert.DeserializeObject<ProfileDefination>(JObject.Parse(body).ToString());
 
-        //    if (response.IsSuccessStatusCode)
-        //    {
-        //        return 0;
-        //    }
+                var profile = profileInfo.profile;
+                var functionGroups = profile.functionGroups;
 
-        //    return 1;
-        //}
-
-        private HttpRequestMessage PrepareRequest(HttpMethod method, string path, object payload, string valueName)
-        {
-            var uri = this.PrepareUri(path);
-            var request = new HttpRequestMessage(method, uri);
-
-            if (payload != null)
-            {
-                //JSON Data to update Enocean device property
-                string payloadString = "{\"state\" : {\"functions\" : [{\"key\" : \"" + valueName + "\",\"value\" : \"" + payload.ToString() + "\"}]}}";
-
-                var json = JsonConvert.ToString(payloadString);
-                request.Content = new HttpStringContent(payloadString);
-            }
-            return request;
-        }
-
-        private Uri PrepareUri(string path)
-        {
-            var url = string.Format("{0}", DCGWUrl + path);
-            return new Uri(url);
-        }
-
-        public void addDevice(string deviceParam, bool isNew )
-        {
-            JToken device = JObject.Parse(deviceParam);
-            var deviceId = device.Value<string>("deviceId");
-            var friendlyId = device.Value<string>("friendlyId");
-
-            Task<HttpResponseMessage> response = httpClient.GetAsync(new Uri(DCGWUrl + "devices/" + deviceId)).AsTask();
-            string body = response.Result.Content.ReadAsStringAsync().AsTask().Result;
-            var eep = JObject.Parse(body).Value<JToken>("device").Value<string>("eep");
-
-            response = httpClient.GetAsync(new Uri(DCGWUrl + "profiles/" + eep)).AsTask();
-            body = response.Result.Content.ReadAsStringAsync().AsTask().Result;
-
-            var profile = JObject.Parse(body).Value<JToken>("profile");
-            var title = profile.Value<string>("title");
-            var functionGroups = profile.Value<JToken>("functionGroups");
-
-            AdapterDevice adapterDevice = null;
-
-            if (isLampProfile(eep)) {
-                 adapterDevice = new Lamp(friendlyId, "EnOcean", eep, "0", deviceId, title);
-                ((Lamp)adapterDevice).adapter = this;
-
-            } else {
-
-                 adapterDevice = new AdapterDevice(friendlyId, "EnOcean", eep, "0", deviceId, title);
+                device.transmitModes.Clear();
 
                 foreach (var functionGroup in functionGroups)
                 {
-                    var titleFG = functionGroup.Value<string>("title");
-                    var direction = functionGroup.Value<string>("direction");
-                    var functions = functionGroup.Value<JToken>("functions");
-
-                    titleFG = titleFG != null ? titleFG : "Property";
-                    var property = new AdapterProperty(titleFG, "");
+                    var functions = functionGroup.functions;
 
                     foreach (var function in functions)
                     {
-                        var key = function.Value<string>("key");
-                        var keyDescription = function.Value<string>("description");
-                        var defaultValue = function.Value<string>("defaultValue");
+                        TransmitMode transmitMode = new TransmitMode();   
+                        transmitMode.key = function.key;
+                        transmitMode.transmitOnConnect = function.transmitOnConnect;
+                        transmitMode.transmitOnEvent = function.transmitOnEvent;
+                        transmitMode.transmitOnDuplicate = function.transmitOnDuplicate;
+                        device.transmitModes.Add(transmitMode);
+                    }
+                }
+                NewDeviceProfile = null;
+            }
+            SetHttpValue("devices/" + device.deviceId, learnInTelegram, null);
+            SetHttpValue("system/receiveMode", null, "normalMode");
+        }
 
-                        var values = function.Value<JToken>("values");
-                        string value = null;
-                        string min = null;
-                        string max = null;
-                        string meaning = null;
+        //Add an extra AllJoyn device for Learn-in an EO device   
+        private AdapterDevice AddLearnInDevice() {
 
+            AdapterDevice LearnInEODevice = new AdapterDevice("LearnInEODevice", "Digital-Concepts", "", "", "", "");
 
-                        if (defaultValue == null && values != null)
+            IAdapterMethod Add_RockerSwitch = new AdapterMethod("Add_RockerSwitch", "Set EO Gateway to learn in mode", 0, "");
+            Add_RockerSwitch.InputParams.Add(new AdapterValue("FriendlyName", "FriendlyName", null));
+            LearnInEODevice.Methods.Add(Add_RockerSwitch);
+
+            IAdapterMethod Add_Sensor = new AdapterMethod("Add_Sensor", "Set EO Gateway to learn in mode", 0, "");
+            Add_Sensor.InputParams.Add(new AdapterValue("FriendlyName", "FriendlyName", null));
+            LearnInEODevice.Methods.Add(Add_Sensor);
+
+            IAdapterMethod Add_Handle = new AdapterMethod("Add_Handle", "Set EO Gateway to learn in mode", 0, "");
+            Add_Handle.InputParams.Add(new AdapterValue("FriendlyName", "FriendlyName", null));
+            LearnInEODevice.Methods.Add(Add_Handle);
+
+            IAdapterMethod Add_Other = new AdapterMethod("Add_Other", "Set EO Gateway to learn in mode", 0, "");
+            Add_Other.InputParams.Add(new AdapterValue("FriendlyName", "FriendlyName", null));
+            LearnInEODevice.Methods.Add(Add_Other);
+
+            return LearnInEODevice;
+        }
+        
+
+    public void AddDevice(Device device, bool isNew )
+        {
+            var deviceId = device.deviceId;
+            var friendlyId = device.friendlyId;
+            var manufacturer = device.manufacturer != null ? device.manufacturer : "Manufacturer";
+            AdapterDevice adapterDevice = null;
+
+            Task<HttpResponseMessage> response = httpClient.GetAsync(new Uri(DCGWUrl + "devices/" + deviceId)).AsTask();
+            string body = response.Result.Content.ReadAsStringAsync().AsTask().Result;
+
+            //DeviceProfiles deviceProifles = JsonConvert.DeserializeObject<DeviceProfiles>(JObject.Parse(body).ToString());
+            foreach (var eep in device.eeps) {
+
+                var eepName = eep.eep;
+                response = httpClient.GetAsync(new Uri(DCGWUrl + "profiles/" + eepName)).AsTask();
+                body = response.Result.Content.ReadAsStringAsync().AsTask().Result;
+
+                ProfileDefination profileInfo = JsonConvert.DeserializeObject<ProfileDefination>(JObject.Parse(body).ToString());
+                var profile = profileInfo.profile;
+                var functionGroups = profile.functionGroups;
+                var title = profile.title != null ? profile.title : "TitleDesciption";
+                                
+
+                if (isLampProfile(eepName))
+                {
+                    adapterDevice = new Lamp(friendlyId, manufacturer, eepName, "0", deviceId, title);
+                    ((Lamp)adapterDevice).Adapter = this;
+                }
+                else {
+
+                    adapterDevice = new AdapterDevice(friendlyId, manufacturer, eepName, "0", deviceId, title);
+                    foreach (var functionGroup in functionGroups)
+                    {
+                        string titleFG = functionGroup.title != null ? functionGroup.title : "Property";
+                        string direction = direction = functionGroup.direction; ;
+                        var functions = functionGroup.functions;
+
+                        var property = new AdapterProperty(titleFG, "");
+                        foreach (var function in functions)
                         {
-                            foreach (var valueJT in values)
-                            {
-                                defaultValue = valueJT.Value<string>("value");
-                                var valueKey = valueJT.Value<string>("valueKey");
-                                meaning = valueJT.Value<string>("meaning");
+                            var key = function.key;
+                            var description = function.description;
+                            var defaultValue = function.defaultValue;
 
-                                var range = valueJT.Value<JToken>("range");
+                            var values = function.values;
+                            string meaning = null;
+                            Range range = null;
+
+                            double min = 0.0;
+                            double max = 0.0;
+                            double step = 0.0;
+                            string unit = null;
+
+                            if (defaultValue == null)
+                            {
+                                var valueTk = values.First<Value>();
+                                meaning = valueTk.meaning;
+                                range = valueTk.range;
+                                defaultValue = valueTk.value;
                                 if (range != null)
                                 {
-                                    string step = null;
-                                    string unit = null;
-
-                                    defaultValue = range.Value<string>("min");
-                                    max = range.Value<string>("max");
-                                    step = range.Value<string>("step");
-                                    unit = range.Value<string>("unit");
+                                    min = range.min;
+                                    max = range.max;
+                                    step = range.step;
+                                    unit = range.unit;
+                                    defaultValue = range.min;
                                 }
-                                break;
                             }
-                        }
-                        else {
-                            var range = function.Value<JToken>("range");
+
+                            object defaultData = Windows.Foundation.PropertyValue.CreateString(defaultValue.ToString());
+                            var valueAttr = new AdapterAttribute(key, defaultData, deviceId, E_ACCESS_TYPE.ACCESS_READWRITE);
+
                             if (range != null)
                             {
-                                string step = null;
-                                string unit = null;
-
-                                defaultValue = range.Value<string>("min");
-                                max = range.Value<string>("max");
-                                step = range.Value<string>("step");
-                                unit = range.Value<string>("unit");
+                                valueAttr.Annotations.Add("min", defaultValue.ToString());
+                                valueAttr.Annotations.Add("max", max.ToString());
+                                valueAttr.Annotations.Add("range", step.ToString());
+                                valueAttr.Annotations.Add("unit", unit);
                             }
-                        }
 
-                        object valueData = Windows.Foundation.PropertyValue.CreateString(defaultValue);
-                        var valueAttr = new AdapterAttribute(key, valueData, deviceId, E_ACCESS_TYPE.ACCESS_READWRITE);
-                        if (direction.Equals("from"))
-                        {
-                            valueAttr = new AdapterAttribute(key, valueData, deviceId, E_ACCESS_TYPE.ACCESS_READ);
-                        }
-                        else if (direction.Equals("both"))
-                        {
-                            object valueDataTest = Windows.Foundation.PropertyValue.CreateString("");
-
-                            //This is a workaround to know if device supports both functionality                                        
-                            //500 is response status for read only property and 400 for device that support both direct, status is 400 because we are sending no value (valueDataTest is emplty string)
-                            uint status = SetHttpValue("devices/" + deviceId + "/state", valueDataTest, key);
-                            if (status == 500)
+                            if (direction.Equals("from"))
                             {
-                                valueAttr = new AdapterAttribute(key, valueData, deviceId, E_ACCESS_TYPE.ACCESS_READ);
+                                valueAttr = new AdapterAttribute(key, defaultData, deviceId, E_ACCESS_TYPE.ACCESS_READ);
                             }
+                            else if (direction.Equals("both"))
+                            {
+                                object valueDataTest = Windows.Foundation.PropertyValue.CreateString("");
+
+                                //This is a workaround to know if device supports both functionality                                        
+                                //500 is response status for read only property and 400 for device that support both direct, 
+                                //status is 400 because we are sending no value (valueDataTest is emplty string)
+                                uint status = SetHttpValue("devices/" + deviceId + "/state", valueDataTest, key);
+                                if (status == 500)
+                                {
+                                    valueAttr = new AdapterAttribute(key, defaultData, deviceId, E_ACCESS_TYPE.ACCESS_READ);
+                                }
+                            }
+
+                            valueAttr.COVBehavior = SignalBehavior.Always;
+                            adapterDevice.AddChangeOfValueSignal(property, valueAttr.Value);
+
+                            property.Attributes.Add(valueAttr);
                         }
-                        valueAttr.COVBehavior = SignalBehavior.Always;
-                        adapterDevice.AddChangeOfValueSignal(property, valueAttr.Value);
-                        property.Attributes.Add(valueAttr);
+                        adapterDevice.Properties.Add(property);
                     }
-                    adapterDevice.Properties.Add(property);
-                }                
+                }
             }
 
-            this.devicesDict.Add(deviceId, adapterDevice);
+            IAdapterMethod Delete = new AdapterMethod("Delete", "Delete EO device", 0, "devices/" + deviceId);
+            adapterDevice.Methods.Add(Delete);
 
-            //update device list in bridge if device is added when bridge is running
-            if (isNew)
+            AdapterDevice AddedDevice = (AdapterDevice)GetObject(devicesDict, deviceId);
+            if ( AddedDevice == null)
+
             {
-                dsbBridge.UpdateDeviceCustome(adapterDevice, false);
-            }
+                this.devicesDict.Add(deviceId, adapterDevice);
 
-            this.NotifyDeviceArrival(adapterDevice);
-            //this.devices = devicesDict.Values.ToList();
-        }
-
-        private void deleteDevice(AdapterDevice adapterDevice)
-        {
-            dsbBridge.UpdateDeviceCustome(adapterDevice, true);
-            //test
-            devicesDict.Remove(adapterDevice.SerialNumber);
-        }
-
-        //Update status of all devices with their current values 
-        private void updateDevices(JToken devicesJT)
-        {
-            var devices = devicesJT.Children();
-            foreach (var deviceToken in devices)
-            {
-                var deviceId = deviceToken.Value<string>("deviceId");
-                AdapterDevice device = (AdapterDevice)GetObject(devicesDict, deviceId);
-
-                var functions = deviceToken.Value<JToken>("states");
-                foreach (var funcntion in functions)
+                //update device list in the bridge if device is added when bridge is running
+                if (isNew)
                 {
-                    var key = funcntion.Value<string>("key");
-                    var value = funcntion.Value<string>("value");
-                    var meaning = funcntion.Value<string>("meaning");
+                    dsbBridge.UpdateDeviceCustome(adapterDevice, false);
+                }
+                this.NotifyDeviceArrival(adapterDevice);
+            }            
+        }
 
-                    if (isLamp(key)) {
-                        ((Lamp)device).updateStates(UInt16.Parse(value));
-                        break;
-                    };
+        //Update status of all abstract EO devices with their current values 
+        private void UpdateDevices(IList<Device> devices)
+        {
+            foreach (var device in devices)
+            {
+                var deviceId = device.deviceId;
+                AdapterDevice adapterDevice = (AdapterDevice)GetObject(devicesDict, deviceId);
 
-                    IList<IAdapterProperty> properties = device.Properties;
-                    foreach (var property in properties)
+                var states = device.states;
+                if (states != null) {
+                    foreach (var state in states)
                     {
-                        IList<IAdapterAttribute> attributes = property.Attributes;
-                        foreach (var attribute in attributes)
+                        var key = state.key;
+                        var value = state.value.ToString();
+                        var meaning = state.meaning;
+
+                        if (isLamp(key))
                         {
-                            if (attribute.Value.Name.Equals(key))
+                            ((Lamp)adapterDevice).updateStates(UInt16.Parse(value));
+                            break;
+                        };
+                        //AdapterValue in AdapterProperty is update with current value
+                        IList<IAdapterProperty> properties = adapterDevice.Properties;
+                        foreach (var property in properties)
+                        {
+                            IList<IAdapterAttribute> attributes = property.Attributes;
+                            foreach (var attribute in attributes)
                             {
-                                if (value != null) {
-                                    attribute.Value.Data = Windows.Foundation.PropertyValue.CreateString(value);
-                                }                                
+                                if (attribute.Value.Name.Equals(key))
+                                {
+                                    if (value != null)
+                                    {
+                                        attribute.Value.Data = Windows.Foundation.PropertyValue.CreateString(value);
+                                    }
+                                }
                             }
                         }
                     }
                 }
+                
             }
         }
        
 
-        //Update status/Property of a single device
-        private void updateDevice(JToken telegram)
+        //Update status/Property of a single EO abstract device
+        private void updateDevice(Telegram telegram)
         {
             
-            var deviceId = telegram.Value<string>("deviceId");
-            var direction = telegram.Value<string>("direction");
-            var functions = telegram.Value<JToken>("functions");
+            var deviceId = telegram.deviceId;
+            var direction = telegram.direction;
+            var functions = telegram.functions;
             foreach (var funcntion in functions)
             {
-                var key = funcntion.Value<string>("key");
-                var value = funcntion.Value<string>("value");
-                var meaning = funcntion.Value<string>("meaning");
+                var key = funcntion.key;
+                var value = funcntion.value.ToString();
 
                 AdapterDevice device = (AdapterDevice)GetObject(devicesDict, deviceId);
 
@@ -831,12 +858,7 @@ namespace AdapterLib
                         if (value != ((Lamp)device).OnOff_Value_Save.ToString())
                         {
                             ((Lamp)device).updateStates(UInt16.Parse(value));
-                        }
-
-                        
-                        //AdapterSignal covSignal = null;
-                        //((AdapterDevice)device).SignalsDict.TryGetValue(SignalHashCode, out covSignal);
-                        //this.NotifySignalListener(covSignal);
+                        }                        
                         break;
                     };
 
@@ -863,6 +885,145 @@ namespace AdapterLib
                     }
                 }
             }
+        }
+
+        private void deleteEODevice(String deviceId)
+        {
+        //    SetHttpValue("devices/" + deviceId, null, "");
+        }
+
+        private void DeleteDevice(AdapterDevice adapterDevice)
+        {
+            dsbBridge.UpdateDeviceCustome(adapterDevice, true);
+            devicesDict.Remove(adapterDevice.SerialNumber);
+        }
+
+        public uint SetHttpValue(string path, object data, string key)
+        {
+            HttpRequestMessage request = null;
+            if (data != null && key != null)
+            {
+                request = PrepareRequest(HttpMethod.Put, path, data, key);
+            }
+            else
+            if (path.Equals(("system/receiveMode")))
+            {
+                request = PrepareLearnInMode(HttpMethod.Post, path, key);
+            }
+            else if (data != null && key == null)
+            {
+                request = PrepareAddDeviceRequest(HttpMethod.Post, path, data);
+            }
+            else if (data == null && key != null)
+            {
+                request = PrepareRemoveDeviceRequest(HttpMethod.Delete, path, data);
+            }
+
+            var response = httpClient.SendRequestAsync(request).AsTask().Result;
+            Windows.Web.Http.HttpStatusCode statusCode = response.StatusCode;
+
+            //Check for respsonse statuscode
+            if (response.StatusCode == Windows.Web.Http.HttpStatusCode.InternalServerError)
+            {
+                return 500;
+            }
+            else if (response.StatusCode == Windows.Web.Http.HttpStatusCode.BadRequest)
+            {
+                return 400;
+            }
+            if (response.IsSuccessStatusCode)
+            {
+                return 0;
+            }
+
+            return 1;
+        }
+
+        //public uint SetHttpValue(string path, string functions)
+        //{
+        //    var request = this.PrepareRequest(HttpMethod.Put, path, null, functions);
+        //    var response = httpClient.SendRequestAsync(request).AsTask().Result;
+
+
+        //    if (response.IsSuccessStatusCode)
+        //    {
+        //        return 0;
+        //    }
+
+        //    return 1;
+        //}
+
+        private HttpRequestMessage PrepareRequest(HttpMethod method, string path, object payload, string key)
+        {
+            var url = string.Format("{0}", DCGWUrl + path);
+            var uri = new Uri(url);
+            var request = new HttpRequestMessage(method, uri);
+            if (payload != null)
+            {
+                //JSON Data to update Enocean device property
+                string payloadString = "{\"state\" : {\"functions\" : [{\"key\" : \"" +
+                    key + "\",\"value\" : \"" + payload.ToString() + "\"}]}}";
+                var json = JsonConvert.ToString(payloadString);
+                request.Content = new HttpStringContent(payloadString);
+            }
+            return request;
+        }
+
+        private HttpRequestMessage PrepareLearnInMode(HttpMethod method, string path, string mode)
+        {
+
+            var url = string.Format("{0}", DCGWUrl + path);
+            var uri = new Uri(url);
+            var request = new HttpRequestMessage(method, uri);
+
+            if (path != null)
+            {
+                //JSON Data to set gateway in learn in mode
+                string learnInMode = "{ \"header\" : { \"content\" : \"receiveMode\"}, \"receiveMode\" : \""+ mode + "\"} }";
+
+                var json = JsonConvert.ToString(learnInMode);
+                request.Content = new HttpStringContent(learnInMode);
+            }
+            return request;
+        }
+
+        private HttpRequestMessage PrepareAddDeviceRequest(HttpMethod method, string path, object data)
+        {
+
+            var url = string.Format("{0}", DCGWUrl + path);
+            var uri = new Uri(url);
+            var request = new HttpRequestMessage(method, uri);
+
+            if (path != null)
+            {
+                //JSON Data to set gateway in learn in mode
+                string json = JsonConvert.SerializeObject((LearnInTelegram)data);
+                request.Content = new HttpStringContent(json);
+            }
+            return request;
+        }
+
+        private HttpRequestMessage PrepareRemoveDeviceRequest(HttpMethod method, string path, object data)
+        {
+
+            var url = string.Format("{0}", DCGWUrl + path);
+            var uri = new Uri(url);
+            var request = new HttpRequestMessage(method, uri);
+
+            //if (path != null)
+            //{
+            //    //JSON Data to set gateway in learn in mode
+            //    string learnInMode = "{ \"header\" : { \"content\" : \"devices\"}, \"receiveMode\" : \"" + mode + "\"} }";
+            //    string json = JsonConvert.SerializeObject((LearnInTelegram)data);
+            //    request.Content = new HttpStringContent(json);
+            //}
+            return request;
+        }
+
+        private Uri PrepareUri(string path)
+        {
+            var url = string.Format("{0}", DCGWUrl + path);
+            return new Uri(url);
         }
 
         //Returns a IAdapter device from Dictionary with specified key
@@ -903,5 +1064,9 @@ namespace AdapterLib
             }
             return false;
         }
+
+
     }
+
+    
 }

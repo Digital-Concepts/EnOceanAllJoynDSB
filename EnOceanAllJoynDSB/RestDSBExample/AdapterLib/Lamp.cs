@@ -12,6 +12,7 @@ namespace AdapterLib
             VendorName, Model, Version, SerialNumber, Description)
         {
             base.LightingServiceHandler = new LightingServiceHandler(this);
+            //base.Signals.Add(base.LightingServiceHandler.LampState_LampStateChanged);
         }
         
         public void turnOnOff(bool LampState_OnOff) {
@@ -20,14 +21,14 @@ namespace AdapterLib
             if (LampState_OnOff)
                 LampState = 100;
 
-            if (!isStateUpdates) {
+            if (!StateUpdated) {
                 setDimValue(LampState);
             }
             
         }
 
         public UInt16 OnOff_Value_Save { get; set; }
-        public bool isStateUpdates { get; set; }
+        public bool StateUpdated { get; set; }
 
         public void updateStates(UInt16 OnOff_Value) {
 
@@ -36,17 +37,17 @@ namespace AdapterLib
                 LampState_On = true;
 
             if (base.LightingServiceHandler.LampState_OnOff != LampState_On) {
-                isStateUpdates = true;
+                StateUpdated = true;
                 base.LightingServiceHandler.LampState_OnOff = LampState_On;                
             }
             
             OnOff_Value_Save = OnOff_Value;
             base.LightingServiceHandler.LampState_Brightness = OnOff_Value;
 
-            isStateUpdates = false;
+            StateUpdated = false;
         }        
 
-        public Adapter adapter
+        public Adapter Adapter
         {
             get; set;
         }
@@ -63,7 +64,9 @@ namespace AdapterLib
         {
             object valueData = Windows.Foundation.PropertyValue.CreateUInt16(value);
             string path = "devices/" + base.SerialNumber + "/state";
-            adapter.SetHttpValue(path, valueData, "dimValue");
+            Adapter.SetHttpValue(path, valueData, "dimValue");
+            //Adapter.NotifySignalListener(base.LightingServiceHandler.LampState_LampStateChanged);
+
         }
     }
 }

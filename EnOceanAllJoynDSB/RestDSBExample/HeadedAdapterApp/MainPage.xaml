@@ -9,8 +9,12 @@
 
     <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}" Margin="10,10,10,65">
         <TextBox x:Name="DCGWURL" HorizontalAlignment="Left" Margin="160,113,0,0" TextWrapping="Wrap" Text="dcgw.enocean-gateway.eu" VerticalAlignment="Top" Width="240"/>
-        <Button x:Name="start" Content="Start" HorizontalAlignment="Left" Margin="342,150,0,0" VerticalAlignment="Top" RenderTransformOrigin="1.294,0.469" Click="start_Click"/>
+        <TextBox x:Name="userName" HorizontalAlignment="Left" Margin="160,156,0,0" TextWrapping="Wrap" Text="user" VerticalAlignment="Top" Width="110"/>
+        <TextBox x:Name="userPassword" HorizontalAlignment="Left" Margin="160,197,0,0" TextWrapping="Wrap" Text="user" VerticalAlignment="Top" Width="110"/>
+        <Button x:Name="start" Content="Start" HorizontalAlignment="Left" Margin="330,157,0,0" VerticalAlignment="Top" RenderTransformOrigin="1.294,0.469" Click="start_Click"/>
         <TextBlock x:Name="textBlock" HorizontalAlignment="Left" Margin="10,125,0,0" TextWrapping="Wrap" Text="EnOcean Gateway IP : " VerticalAlignment="Top"/>
         <Button x:Name="stop" Content="Stop" HorizontalAlignment="Left" Margin="342,150,0,0" VerticalAlignment="Top" Click="stop_Click" Visibility="Collapsed"/>
+        <TextBlock x:Name="user" HorizontalAlignment="Left" Margin="62,161,0,0" TextWrapping="Wrap" Text="User : " VerticalAlignment="Top" RenderTransformOrigin="0.405,3"/>
+        <TextBlock x:Name="password" HorizontalAlignment="Left" Margin="48,202,0,0" TextWrapping="Wrap" Text="Password : " VerticalAlignment="Top" RenderTransformOrigin="0.42,3"/>
     </Grid>
 </Page>

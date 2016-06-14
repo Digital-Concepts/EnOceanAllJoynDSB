@@ -35,8 +35,7 @@ namespace HeadedAdapterApp
         private async void start_Click(object sender, RoutedEventArgs e)
         {
             string DCGW_URL = DCGWURL.Text;
-            
-            //This code was taken from App.xaml.cs 
+
             //This code is placed here becuase we need to start Bridge after IP of EnOcean Gateway is available
             await ThreadPool.RunAsync(new WorkItemHandler((IAsyncAction action) =>
               {
@@ -45,7 +44,6 @@ namespace HeadedAdapterApp
                       adapter = new AdapterLib.Adapter(DCGW_URL);
                       dsbBridge = new DsbBridge(adapter);
 
-                      //Change made on (25/1/2016)
                       //Adapter object need dsbBridge to Add new devices
                       adapter.setDsbBridge(dsbBridge);
 
@@ -54,7 +52,6 @@ namespace HeadedAdapterApp
                       {
                           throw new Exception("DSB Bridge initialization failed!");
                       }
-
                   }
                   catch (Exception ex)
                   {
