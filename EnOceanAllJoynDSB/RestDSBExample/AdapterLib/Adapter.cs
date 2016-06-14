@@ -26,6 +26,8 @@ namespace AdapterLib
     {
         // Connection strings variable for EnOcean APIs
         public static string DCGWUrl { get; set; }
+        public static string user { get; set; }
+        public static string password { get; set; }
         private HttpClient httpClient;
 
         //This refer to DsbBridge in BridegRT project, 
@@ -52,12 +54,13 @@ namespace AdapterLib
         public Guid ExposedApplicationGuid { get; }
         public IList<IAdapterSignal> Signals { get; }
 
-        public Adapter(string DCGWURLParam)
+        public Adapter(string DCGWURLParam, string userName, string userPassword)
         {
 
             //setting IP of gateway from UI             
             DCGWUrl = "http://" + DCGWURLParam + ":8080/";
-
+            user = userPassword;
+            password = userPassword;
             Windows.ApplicationModel.Package package = Windows.ApplicationModel.Package.Current;
             Windows.ApplicationModel.PackageId packageId = package.Id;
             Windows.ApplicationModel.PackageVersion versionFromPkg = packageId.Version;
@@ -123,7 +126,7 @@ namespace AdapterLib
             var filter = new HttpBaseProtocolFilter();
             try
             {
-                filter.ServerCredential = new Windows.Security.Credentials.PasswordCredential(DCGWUrl, "admin", "admin");
+                filter.ServerCredential = new Windows.Security.Credentials.PasswordCredential(DCGWUrl, user, password);
                 httpClient = new HttpClient(filter);
             }
             catch (ArgumentNullException ex)
@@ -140,24 +143,29 @@ namespace AdapterLib
             return ERROR_SUCCESS;
         }
 
-        //private void setDCGURL()
-        //{
-        //    //var sf = await Package.Current.InstalledLocation.TryGetItemAsync("ipaddress.txt") as StorageFile;
-        //    //Adapter.DCGWUrl = await Windows.Storage.FileIO.ReadTextAsync(sf).AsTask<string>();
-        //    //Adapter.DCGWUrl = System.IO.File.ReadAllText(@"C:\Data\Users\DefaultAccount\ipaddress.txt");
-        //    DCGWUrl = "http://172.28.28.51:8080/";
-        //    //DCGWUrl = "http:/dcgw.enocean-gateway.eu:8080/"
-        //    //try {
-        //    //    WebRequest request = WebRequest.CreateHttp("http:/www.enocean-gateway.de/iot/ip.txt");
-        //    //    WebResponse response = request.GetResponseAsync().Result;
-        //    //    Stream dataStream = response.GetResponseStream();
-        //    //    StreamReader reader = new StreamReader(dataStream);
-        //    //    DCGWUrl = reader.ReadLine();
-        //    //}
-        //    //catch (Exception ex) {
-        //    //    Debug.WriteLine(ex.Message);
-        //    //} 
-        //}
+        public void setDCGWAttributes()
+        {
+            //var sf = await Package.Current.InstalledLocation.TryGetItemAsync("ipaddress.txt") as StorageFile;
+            //Adapter.DCGWUrl = await Windows.Storage.FileIO.ReadTextAsync(sf).AsTask<string>();
+            //Adapter.DCGWUrl = System.IO.File.ReadAllText(@"C:\Data\Users\DefaultAccount\ipaddress.txt");
+            //DCGWUrl = "http://172.28.28.51:8080/";
+            //DCGWUrl = "http:/dcgw.enocean-gateway.eu:8080/"
+            try
+            {
+                
+                WebRequest request = WebRequest.CreateHttp("http://www.enocean-gateway.de/iot/ip.txt");
+                WebResponse response = request.GetResponseAsync().Result;
+                Stream dataStream = response.GetResponseStream();
+                StreamReader reader = new StreamReader(dataStream);
+                DCGWUrl = "http://" + reader.ReadLine().Trim() + ":8080/";
+                user = reader.ReadLine().Trim();
+                password = reader.ReadLine().Trim();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex.Message);
+            }
+        }
 
         public uint Shutdown()
         {
@@ -478,6 +486,7 @@ namespace AdapterLib
                                 bufferStream += dataReader.ReadString(buffer.Length);
                                 
                                 var isJsonValid = ValidateJSON(bufferStream);
+                                //Debug.WriteLine(isJsonValid + ":::" + bufferStream + "xxx");
                                 if (isJsonValid)
                                 {
                                     var streamJson = JObject.Parse(bufferStream);

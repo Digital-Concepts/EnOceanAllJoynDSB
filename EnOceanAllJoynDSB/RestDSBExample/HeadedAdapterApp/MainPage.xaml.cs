@@ -35,13 +35,15 @@ namespace HeadedAdapterApp
         private async void start_Click(object sender, RoutedEventArgs e)
         {
             string DCGW_URL = DCGWURL.Text;
+            string user = userName.Text;
+            string password = userPassword.Text;
 
             //This code is placed here becuase we need to start Bridge after IP of EnOcean Gateway is available
             await ThreadPool.RunAsync(new WorkItemHandler((IAsyncAction action) =>
               {
                   try
                   {
-                      adapter = new AdapterLib.Adapter(DCGW_URL);
+                      adapter = new AdapterLib.Adapter(DCGW_URL, user, password);
                       dsbBridge = new DsbBridge(adapter);
 
                       //Adapter object need dsbBridge to Add new devices

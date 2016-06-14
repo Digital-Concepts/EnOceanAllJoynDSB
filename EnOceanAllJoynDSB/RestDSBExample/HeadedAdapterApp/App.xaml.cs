@@ -28,7 +28,7 @@ namespace HeadedAdapterApp
     /// </summary>
     sealed partial class App : Application
     {
-        private DsbBridge dsbBridge;
+       private DsbBridge dsbBridge;
 
         /// <summary>
         /// Allows tracking page views, exceptions and other telemetry through the Microsoft Application Insights service.
@@ -82,24 +82,28 @@ namespace HeadedAdapterApp
                 Window.Current.Content = rootFrame;
 
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-                //ThreadPool.RunAsync(new WorkItemHandler((IAsyncAction action) =>
-                //{
-                //    try
-                //    {
-                //        var adapter = new Adapter();
-                //        dsbBridge = new DsbBridge(adapter);
+                ThreadPool.RunAsync(new WorkItemHandler((IAsyncAction action) =>
+                {
+                    try
+                    {
+                        var adapter = new Adapter("", "", "" );
+                        dsbBridge = new DsbBridge(adapter);
+                        adapter.setDCGWAttributes();
 
-                //        var initResult = this.dsbBridge.Initialize();
-                //        if (initResult != 0)
-                //        {
-                //            throw new Exception("DSB Bridge initialization failed!");
-                //        }
-                //    }
-                //    catch (Exception ex)
-                //    {
-                //        throw;
-                //    }
-                //}));
+                        //Adapter object need dsbBridge to Add new devices
+                        adapter.setDsbBridge(dsbBridge);
+
+                        var initResult = this.dsbBridge.Initialize();
+                        if (initResult != 0)
+                        {
+                            throw new Exception("DSB Bridge initialization failed!");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        throw;
+                    }
+                }));
             }
 
             if (rootFrame.Content == null)
@@ -132,7 +136,7 @@ namespace HeadedAdapterApp
         /// <param name="e">Details about the suspend request.</param>
         private void OnSuspending(object sender, SuspendingEventArgs e)
         {
-            dsbBridge?.Shutdown();
+            //dsbBridge?.Shutdown();
 
             var deferral = e.SuspendingOperation.GetDeferral();
             //TODO: Save application state and stop any background activity
